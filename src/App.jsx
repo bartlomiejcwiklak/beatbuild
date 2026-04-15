@@ -4,6 +4,8 @@ import LoopGrid from "./components/LoopGrid";
 import { createLoopEngine } from "./audio/loopEngine";
 
 const LOOP_COUNT = 16;
+const MAIN_LOGO_SRC =
+  "file:///C:/Users/bartl/.cursor/projects/c-Users-bartl-Desktop-beatbuild/assets/c__Users_bartl_AppData_Roaming_Cursor_User_workspaceStorage_27ebd4792ac6eeebbdadd4b07e0d817c_images_logo-33a587b3-07c2-4155-8b94-74ad07db858c.png";
 
 const normalizePreset = (preset) => {
   const folderPath = `/musicassets/${preset.folder}`;
@@ -26,6 +28,7 @@ export default function App() {
   const [activeButtons, setActiveButtons] = useState(new Array(LOOP_COUNT).fill(false));
   const [isPlaying, setIsPlaying] = useState(true);
   const [loadError, setLoadError] = useState("");
+  const [logoSrc, setLogoSrc] = useState(MAIN_LOGO_SRC);
 
   useEffect(() => {
     let mounted = true;
@@ -123,7 +126,14 @@ export default function App() {
     <main className="app-shell">
       {screen === "menu" ? (
         <section className="menu-screen">
-          <h1 className="logo">BeatBuild</h1>
+          <h1 className="logo">
+            <img
+              className="logo-image"
+              src={logoSrc}
+              alt="BeatBuild"
+              onError={() => setLogoSrc("/logo.png")}
+            />
+          </h1>
           <AlbumCarousel albums={albums} selectedIndex={selectedIndex} onSelect={shiftAlbum} />
           <h2 className="album-title">{selectedAlbum.title}</h2>
           <button className="primary-btn" onClick={handleStart}>

@@ -1,5 +1,17 @@
+@font-face {
+  font-family: "Stack Sans Notch";
+  src:
+    local("Stack Sans Notch"),
+    url("file:///C:/Users/bartl/Downloads/StackSansNotch-VariableFont_wght.ttf")
+      format("truetype"),
+    url("/fonts/StackSansNotch-VariableFont_wght.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+}
+
 :root {
-  font-family: "IBM Plex Sans", "Inter", "Segoe UI", Roboto, sans-serif;
+  font-family: "Stack Sans Notch", "Segoe UI", Roboto, sans-serif;
   color: #eef2ff;
   background: #0d0f14;
 }
@@ -39,12 +51,17 @@ body {
 
 .logo {
   margin: 0;
-  font-size: clamp(2rem, 6vw, 4rem);
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
-  font-family: "Archivo Black", "Arial Black", "IBM Plex Sans", sans-serif;
-  color: #f5f7ff;
-  text-shadow: 0 2px 14px rgba(108, 92, 231, 0.35);
+  width: min(680px, 90vw);
+  display: grid;
+  place-items: center;
+}
+
+.logo-image {
+  width: 100%;
+  max-height: 120px;
+  margin-bottom: 50px;
+  object-fit: contain;
+  display: block;
 }
 
 .album-picker {
@@ -325,6 +342,7 @@ body {
 .arrow-btn,
 .primary-btn,
 .secondary-btn {
+  font-family: "Stack Sans Notch", "Segoe UI", Roboto, sans-serif;
   border: 2px solid #2a3042;
   border-radius: 0;
   font-weight: 700;
@@ -372,7 +390,6 @@ body {
 .player-header h2 {
   margin: 0;
   text-align: center;
-  font-family: "Archivo Black", "Arial Black", "IBM Plex Sans", sans-serif;
   letter-spacing: 0.05em;
   text-transform: uppercase;
   font-size: clamp(1rem, 2.2vw, 1.4rem);
