@@ -166,11 +166,22 @@ export function createLoopEngine() {
   const getActive = () => [...activeState];
   const getIsPlaying = () => isPlaying;
 
+  const setMasterVolume = (value) => {
+    if (!masterGain || !audioContext) {
+      return;
+    }
+    const clamped = Math.max(0, Math.min(1, Number(value)));
+    const t = audioContext.currentTime;
+    masterGain.gain.cancelScheduledValues(t);
+    masterGain.gain.setValueAtTime(clamped, t);
+  };
+
   return {
     loadPreset,
     start,
     setPlaying,
     setActive,
+    setMasterVolume,
     getActive,
     getIsPlaying,
     destroy

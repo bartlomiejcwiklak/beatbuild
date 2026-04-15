@@ -32,6 +32,7 @@ export default function App() {
   const [isPlaying, setIsPlaying] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [logoSrc, setLogoSrc] = useState(MAIN_LOGO_SRC);
+  const [masterVolume, setMasterVolume] = useState(0.95);
 
   useEffect(() => {
     let mounted = true;
@@ -78,6 +79,7 @@ export default function App() {
     }
 
     await engineRef.current.loadPreset(selectedAlbum);
+    engineRef.current.setMasterVolume(masterVolume);
     await engineRef.current.start();
 
     setIsPlaying(true);
@@ -98,6 +100,12 @@ export default function App() {
     const next = !isPlaying;
     await engineRef.current.setPlaying(next);
     setIsPlaying(next);
+  };
+
+  const handleMasterVolumeChange = (event) => {
+    const value = Number(event.target.value);
+    setMasterVolume(value);
+    engineRef.current.setMasterVolume(value);
   };
 
   const handleBackToMenu = async () => {
@@ -154,6 +162,25 @@ export default function App() {
               {isPlaying ? "Pause" : "Play"}
             </button>
           </header>
+          <div className="master-volume-row">
+            <label className="master-volume-label" htmlFor="master-volume">
+              Master
+            </label>
+            <input
+              id="master-volume"
+              className="master-volume-slider"
+              type="range"
+              min={0}
+              max={1}
+              step={0.01}
+              value={masterVolume}
+              onChange={handleMasterVolumeChange}
+              aria-label="Master volume"
+            />
+            <span className="master-volume-value" aria-hidden="true">
+              {Math.round(masterVolume * 100)}
+            </span>
+          </div>
           <LoopGrid
             buttonMap={selectedAlbum.buttonMap}
             activeButtons={activeButtons}

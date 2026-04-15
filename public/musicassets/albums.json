@@ -1,8 +1,34 @@
 [
   {
-    "id": "dance1",
+    "id": "chromecannon",
     "title": "CHROME CANNON",
-    "folder": "dance1",
+    "folder": "chromecannon",
+    "coverFront": "cover-front.jpg",
+    "coverBack": "cover-back.jpg",
+    "buttonMap": "button-map.jpg",
+    "loops": [
+      "loop01.mp3",
+      "loop02.mp3",
+      "loop03.mp3",
+      "loop04.mp3",
+      "loop05.mp3",
+      "loop06.mp3",
+      "loop07.mp3",
+      "loop08.mp3",
+      "loop09.mp3",
+      "loop10.mp3",
+      "loop11.mp3",
+      "loop12.mp3",
+      "loop13.mp3",
+      "loop14.mp3",
+      "loop15.mp3",
+      "loop16.mp3"
+    ]
+  },
+  {
+    "id": "warm",
+    "title": "warm.",
+    "folder": "warm",
     "coverFront": "cover-front.jpg",
     "coverBack": "cover-back.jpg",
     "buttonMap": "button-map.jpg",

@@ -395,6 +395,74 @@ body {
   font-size: clamp(1rem, 2.2vw, 1.4rem);
 }
 
+.master-volume-row {
+  width: 100%;
+  max-width: min(700px, 92vw);
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 0.75rem 1rem;
+  align-items: center;
+}
+
+.master-volume-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #9ca3af;
+}
+
+.master-volume-slider {
+  width: 100%;
+  height: 6px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: #1a1f2e;
+  border: 2px solid #2a3042;
+  border-radius: 0;
+  cursor: pointer;
+}
+
+.master-volume-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 18px;
+  background: #6c5ce7;
+  border: 2px solid #a29bfe;
+  border-radius: 0;
+  cursor: grab;
+}
+
+.master-volume-slider::-webkit-slider-thumb:active {
+  cursor: grabbing;
+}
+
+.master-volume-slider::-moz-range-thumb {
+  width: 16px;
+  height: 18px;
+  background: #6c5ce7;
+  border: 2px solid #a29bfe;
+  border-radius: 0;
+  cursor: grab;
+}
+
+.master-volume-value {
+  min-width: 2.25rem;
+  text-align: right;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #9ca3af;
+}
+
+.master-volume-value::after {
+  content: "%";
+  margin-left: 0.1rem;
+  font-size: 0.65rem;
+  opacity: 0.85;
+}
+
 .loop-grid {
   width: min(700px, 92vw);
   display: grid;
