@@ -4,11 +4,14 @@ import LoopGrid from "./components/LoopGrid";
 import { createLoopEngine } from "./audio/loopEngine";
 
 const LOOP_COUNT = 16;
+const BASE_URL = import.meta.env.BASE_URL;
 const MAIN_LOGO_SRC =
   "file:///C:/Users/bartl/.cursor/projects/c-Users-bartl-Desktop-beatbuild/assets/c__Users_bartl_AppData_Roaming_Cursor_User_workspaceStorage_27ebd4792ac6eeebbdadd4b07e0d817c_images_logo-33a587b3-07c2-4155-8b94-74ad07db858c.png";
 
+const resolvePublicAsset = (relativePath) => `${BASE_URL}${relativePath}`;
+
 const normalizePreset = (preset) => {
-  const folderPath = `/musicassets/${preset.folder}`;
+  const folderPath = resolvePublicAsset(`musicassets/${preset.folder}`);
   const loops = preset.loops.map((loopName) => `${folderPath}/${loopName}`);
 
   return {
@@ -35,7 +38,7 @@ export default function App() {
 
     const loadAlbums = async () => {
       try {
-        const response = await fetch("/musicassets/albums.json");
+        const response = await fetch(resolvePublicAsset("musicassets/albums.json"));
         if (!response.ok) {
           throw new Error("Could not load album manifest.");
         }
@@ -131,7 +134,7 @@ export default function App() {
               className="logo-image"
               src={logoSrc}
               alt="BeatBuild"
-              onError={() => setLogoSrc("/logo.png")}
+              onError={() => setLogoSrc(resolvePublicAsset("logo.png"))}
             />
           </h1>
           <AlbumCarousel albums={albums} selectedIndex={selectedIndex} onSelect={shiftAlbum} />
