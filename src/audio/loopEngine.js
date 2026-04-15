@@ -6,7 +6,7 @@ export function createLoopEngine() {
   let tracks = [];
   let activeState = new Array(TARGET_LOOP_COUNT).fill(false);
   let isPlaying = false;
-  let unlocked = false;
+  let hasStartedTransport = false;
 
   const fadeTo = (gainNode, value, duration = 0.04) => {
     if (!audioContext || !gainNode) {
@@ -33,12 +33,47 @@ export function createLoopEngine() {
     }
   };
 
+  const fetchAndDecode = async (url) => {
+    if (!url) {
+      return null;
+    }
+
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Could not load loop file: ${url}`);
+    }
+
+    const arrayBuffer = await response.arrayBuffer();
+    return audioContext.decodeAudioData(arrayBuffer);
+  };
+
+  const createSourceForTrack = (track, offset = 0) => {
+    if (!track?.buffer) {
+      return null;
+    }
+
+    const source = audioContext.createBufferSource();
+    source.buffer = track.buffer;
+    source.loop = true;
+    source.connect(track.gain);
+
+    track.source = source;
+    track.started = true;
+    source.start(offset, 0);
+
+    return source;
+  };
+
   const stopTrackAudio = () => {
     tracks.forEach((track) => {
-      track.audio.pause();
-      track.audio.currentTime = 0;
-      track.audio.src = "";
-      track.source.disconnect();
+      if (track.source) {
+        try {
+          track.source.stop();
+        } catch (_error) {
+          // Source may already be stopped.
+        }
+        track.source.disconnect();
+      }
       track.gain.disconnect();
     });
     tracks = [];
@@ -48,6 +83,7 @@ export function createLoopEngine() {
     stopTrackAudio();
     activeState = new Array(TARGET_LOOP_COUNT).fill(false);
     isPlaying = false;
+    hasStartedTransport = false;
   };
 
   const loadPreset = async (preset) => {
@@ -59,25 +95,19 @@ export function createLoopEngine() {
       loopUrls.push(null);
     }
 
-    tracks = loopUrls.map((url) => {
-      const audio = new Audio(url ?? "");
-      audio.loop = true;
-      audio.crossOrigin = "anonymous";
-      audio.preload = "auto";
-
-      const source = audioContext.createMediaElementSource(audio);
+    const buffers = await Promise.all(loopUrls.map((url) => fetchAndDecode(url)));
+    tracks = buffers.map((buffer) => {
       const gain = audioContext.createGain();
       gain.gain.value = 0;
 
-      source.connect(gain);
       gain.connect(masterGain);
 
-      return { audio, source, gain };
+      return { buffer, source: null, gain, started: false };
     });
 
     activeState = new Array(TARGET_LOOP_COUNT).fill(false);
     isPlaying = false;
-    unlocked = false;
+    hasStartedTransport = false;
   };
 
   const start = async () => {
@@ -86,39 +116,41 @@ export function createLoopEngine() {
     }
 
     await ensureContext();
+    if (!hasStartedTransport) {
+      const startAt = audioContext.currentTime + 0.03;
+      tracks.forEach((track, index) => {
+        createSourceForTrack(track, startAt);
+        fadeTo(track.gain, activeState[index] ? 1 : 0, 0.02);
+      });
+      hasStartedTransport = true;
+    } else if (audioContext.state === "suspended") {
+      await audioContext.resume();
+    }
 
-    const starts = tracks.map((track) => {
-      track.audio.currentTime = 0;
-      return track.audio.play();
-    });
-
-    await Promise.all(starts);
-    unlocked = true;
     isPlaying = true;
-
-    tracks.forEach((track, index) => {
-      fadeTo(track.gain, activeState[index] ? 1 : 0);
-    });
   };
 
   const setPlaying = async (nextPlaying) => {
-    if (!tracks.length) {
+    if (!tracks.length || !audioContext) {
       return;
     }
 
     if (nextPlaying) {
-      if (!unlocked) {
+      if (!hasStartedTransport) {
         await start();
         return;
       }
 
-      await ensureContext();
-      await Promise.all(tracks.map((track) => track.audio.play()));
+      if (audioContext.state === "suspended") {
+        await audioContext.resume();
+      }
       isPlaying = true;
       return;
     }
 
-    tracks.forEach((track) => track.audio.pause());
+    if (audioContext.state === "running") {
+      await audioContext.suspend();
+    }
     isPlaying = false;
   };
 
@@ -128,9 +160,7 @@ export function createLoopEngine() {
     }
     activeState[index] = isActive;
 
-    if (isPlaying) {
-      fadeTo(tracks[index].gain, isActive ? 1 : 0);
-    }
+    fadeTo(tracks[index].gain, isActive ? 1 : 0);
   };
 
   const getActive = () => [...activeState];
