@@ -67,6 +67,11 @@ body {
   margin-bottom: 50px;
   object-fit: contain;
   display: block;
+  transition: transform 250ms ease;
+}
+
+.logo-image:hover {
+  transform: rotate(-3deg) scale(1.02);
 }
 
 .album-picker {
@@ -510,6 +515,22 @@ body {
   font-size: 0.78rem;
   line-height: 1.45;
   color: #aeb8d8;
+}
+
+.github-link {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #aeb8d8;
+  text-decoration: none;
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: color 150ms ease;
+  margin-top: 0.25rem;
+}
+
+.github-link:hover {
+  color: #fff;
 }
 
 .player-header {
