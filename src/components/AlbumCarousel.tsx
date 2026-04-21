@@ -128,7 +128,13 @@ export default function AlbumCarousel({ albums, selectedIndex, onSelect }: Album
       </button>
 
       <div className="carousel-stage">
-        <div className="album-side album-side-left">
+        <div
+          className="album-side album-side-left"
+          onClick={() => handleArrow(-1)}
+          role="button"
+          tabIndex={0}
+          aria-label="Previous album"
+        >
           <img src={prev.coverFront} alt={`${prev.title} preview`} draggable={false} />
         </div>
 
@@ -157,7 +163,13 @@ export default function AlbumCarousel({ albums, selectedIndex, onSelect }: Album
           </div>
         </div>
 
-        <div className="album-side album-side-right">
+        <div
+          className="album-side album-side-right"
+          onClick={() => handleArrow(1)}
+          role="button"
+          tabIndex={0}
+          aria-label="Next album"
+        >
           <img src={next.coverFront} alt={`${next.title} preview`} draggable={false} />
         </div>
       </div>
