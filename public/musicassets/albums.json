@@ -27,11 +27,12 @@
     ]
   },
   {
-    "id": "warm",
-    "title": "warm.",
-    "folder": "warm",
+    "id": "digitallove",
+    "title": "DIGITAL LOVE",
+    "folder": "digitallove",
     "coverFront": "cover-front.jpg",
     "coverBack": "cover-back.jpg",
+    "spine": "spine.jpg",
     "buttonMap": "button-map.jpg",
     "loops": [
       "loop01.mp3",

@@ -150,32 +150,37 @@ export default function App() {
             Settings
           </button>
           {settingsOpen ? (
-            <aside className="settings-panel" role="dialog" aria-label="Project settings">
-              <h3 className="settings-title">Settings</h3>
-              <div className="settings-volume-row">
-                <label className="master-volume-label" htmlFor="menu-master-volume">
-                  Master
-                </label>
-                <input
-                  id="menu-master-volume"
-                  className="master-volume-slider"
-                  type="range"
-                  min={0}
-                  max={1}
-                  step={0.01}
-                  value={masterVolume}
-                  onChange={handleMasterVolumeChange}
-                  aria-label="Master volume"
-                />
-                <span className="master-volume-value" aria-hidden="true">
-                  {Math.round(masterVolume * 100)}
-                </span>
-              </div>
-              <p className="settings-info">
-                BeatBuild is a loop-based music toy. Pick an album, launch the player, and build your own beat by
-                toggling pads.
-              </p>
-            </aside>
+            <div className="settings-overlay" onClick={() => setSettingsOpen(false)}>
+              <aside className="settings-panel" role="dialog" aria-label="Project settings" onClick={(e) => e.stopPropagation()}>
+                <header className="settings-header">
+                  <h3 className="settings-title">Settings</h3>
+                  <button className="settings-close-btn" onClick={() => setSettingsOpen(false)} aria-label="Close settings">✕</button>
+                </header>
+                <div className="settings-volume-row">
+                  <label className="master-volume-label" htmlFor="menu-master-volume">
+                    Master
+                  </label>
+                  <input
+                    id="menu-master-volume"
+                    className="master-volume-slider"
+                    type="range"
+                    min={0}
+                    max={1}
+                    step={0.01}
+                    value={masterVolume}
+                    onChange={handleMasterVolumeChange}
+                    aria-label="Master volume"
+                  />
+                  <span className="master-volume-value" aria-hidden="true">
+                    {Math.round(masterVolume * 100)}
+                  </span>
+                </div>
+                <p className="settings-info">
+                  BeatBuild is a loop-based music toy. Pick an album, launch the player, and build your own beat by
+                  toggling pads.
+                </p>
+              </aside>
+            </div>
           ) : null}
           <h1 className="logo">
             <img
