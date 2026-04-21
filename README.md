@@ -15,3 +15,7 @@ but, if you'd rather not do that, then:
 npm install && npm run dev
 ```
 will do the trick just as well.
+
+### gallery
+
+<img width="1920" height="911" alt="image" src="https://github.com/user-attachments/assets/3721352c-00d0-4533-af7f-8f96e5d0f8a5" />
