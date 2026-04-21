@@ -18,4 +18,6 @@ will do the trick just as well.
 
 ### gallery
 
-<img width="1920" height="911" alt="image" src="https://github.com/user-attachments/assets/3721352c-00d0-4533-af7f-8f96e5d0f8a5" />
+<img width="1920" height="911" alt="chrome_iywPUVVoGp" src="https://github.com/user-attachments/assets/b01a4232-9f6a-46d8-b79c-b856ebb50568" />
+<img width="1920" height="911" alt="chrome_NyswzpizWE" src="https://github.com/user-attachments/assets/784cf7f3-ebd2-498c-9fb7-3c3e63e299d0" />
+
