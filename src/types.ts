@@ -5,6 +5,7 @@ export interface AlbumManifestEntry {
   coverFront: string;
   coverBack: string;
   buttonMap: string;
+  spine?: string;
   loops: string[];
 }
 
@@ -15,6 +16,7 @@ export interface AlbumPreset {
   coverFront: string;
   coverBack: string;
   buttonMap: string;
+  spine?: string;
   loops: string[];
 }
 

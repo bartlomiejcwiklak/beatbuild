@@ -6,7 +6,6 @@
     "coverFront": "cover-front.jpg",
     "coverBack": "cover-back.jpg",
     "buttonMap": "button-map.jpg",
-    "spine": "spine.jpg",
     "loops": [
       "loop01.mp3",
       "loop02.mp3",

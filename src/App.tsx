@@ -20,6 +20,7 @@ const normalizePreset = (preset: AlbumManifestEntry): AlbumPreset => {
     coverFront: `${folderPath}/${preset.coverFront}`,
     coverBack: `${folderPath}/${preset.coverBack}`,
     buttonMap: `${folderPath}/${preset.buttonMap}`,
+    ...(preset.spine ? { spine: `${folderPath}/${preset.spine}` } : {}),
     loops
   };
 };
@@ -34,6 +35,7 @@ export default function App() {
   const [loadError, setLoadError] = useState("");
   const [logoSrc, setLogoSrc] = useState(MAIN_LOGO_SRC);
   const [masterVolume, setMasterVolume] = useState(0.95);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -138,6 +140,43 @@ export default function App() {
     <main className="app-shell">
       {screen === "menu" ? (
         <section className="menu-screen">
+          <button
+            className="settings-btn"
+            type="button"
+            aria-label="Open settings"
+            aria-expanded={settingsOpen}
+            onClick={() => setSettingsOpen((open) => !open)}
+          >
+            Settings
+          </button>
+          {settingsOpen ? (
+            <aside className="settings-panel" role="dialog" aria-label="Project settings">
+              <h3 className="settings-title">Settings</h3>
+              <div className="settings-volume-row">
+                <label className="master-volume-label" htmlFor="menu-master-volume">
+                  Master
+                </label>
+                <input
+                  id="menu-master-volume"
+                  className="master-volume-slider"
+                  type="range"
+                  min={0}
+                  max={1}
+                  step={0.01}
+                  value={masterVolume}
+                  onChange={handleMasterVolumeChange}
+                  aria-label="Master volume"
+                />
+                <span className="master-volume-value" aria-hidden="true">
+                  {Math.round(masterVolume * 100)}
+                </span>
+              </div>
+              <p className="settings-info">
+                BeatBuild is a loop-based music toy. Pick an album, launch the player, and build your own beat by
+                toggling pads.
+              </p>
+            </aside>
+          ) : null}
           <h1 className="logo">
             <img
               className="logo-image"
