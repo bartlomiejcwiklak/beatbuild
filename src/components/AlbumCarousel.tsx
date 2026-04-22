@@ -41,11 +41,31 @@ export default function AlbumCarousel({ albums, selectedIndex, onSelect }: Album
     []
   );
 
+  useEffect(() => {
+    let animationFrameId: number;
+    let lastTime = performance.now();
+
+    const animate = (time: number) => {
+      const deltaTime = Math.min(time - lastTime, 50); // Cap delta to avoid large jumps
+      lastTime = time;
+
+      if (!dragRef.current.dragging && !isArrowTransitionRef.current) {
+        setRotationY((prev) => prev + (deltaTime * 0.015)); // 15 degrees per second
+      }
+      
+      animationFrameId = requestAnimationFrame(animate);
+    };
+
+    animationFrameId = requestAnimationFrame(animate);
+
+    return () => cancelAnimationFrame(animationFrameId);
+  }, []);
+
   const cardStyle = useMemo(
     () =>
       ({
         transform: `rotateX(12deg) rotateY(${rotationY - 24}deg)`,
-        transition: isDragging ? "none" : "transform 140ms ease-out"
+        transition: isArrowTransitionRef.current ? "transform 140ms ease-out" : "none"
       }) as CSSProperties,
     [isDragging, rotationY]
   );
@@ -116,6 +136,7 @@ export default function AlbumCarousel({ albums, selectedIndex, onSelect }: Album
     const inTimer = window.setTimeout(() => {
       setTransitionClass("");
       isArrowTransitionRef.current = false;
+      setRotationY((prev) => prev); // Trigger re-render to resume auto-rotation
     }, 430);
 
     arrowTimersRef.current.push(outTimer, inTimer);

@@ -154,6 +154,47 @@ export default function App() {
     setScreen("menu");
   };
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (isLoading || settingsOpen) return;
+
+      if (screen === "menu") {
+        if (e.key === "ArrowLeft") {
+          const btn = document.querySelector('.arrow-btn[aria-label="Previous album"]') as HTMLButtonElement | null;
+          btn?.click();
+        } else if (e.key === "ArrowRight") {
+          const btn = document.querySelector('.arrow-btn[aria-label="Next album"]') as HTMLButtonElement | null;
+          btn?.click();
+        } else if (e.key === " " || e.key === "Enter") {
+          e.preventDefault();
+          void handleStart();
+        }
+      } else if (screen === "player") {
+        const keyMap: Record<string, number> = {
+          "1": 0, "2": 1, "3": 2, "4": 3,
+          "q": 4, "w": 5, "e": 6, "r": 7,
+          "a": 8, "s": 9, "d": 10, "f": 11,
+          "z": 12, "x": 13, "c": 14, "v": 15
+        };
+
+        const key = e.key.toLowerCase();
+
+        if (key in keyMap) {
+          handleToggleButton(keyMap[key]);
+        } else if (e.key === " ") {
+          e.preventDefault();
+          void handlePauseToggle();
+        } else if (e.key === "Escape") {
+          e.preventDefault();
+          void handleBackToMenu();
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [screen, isLoading, settingsOpen, handleStart, handlePauseToggle, handleBackToMenu]);
+
   if (loadError) {
     return (
       <main className="app-shell">
