@@ -1,6 +1,7 @@
 import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import AlbumCarousel from "./components/AlbumCarousel";
 import LoopGrid from "./components/LoopGrid";
+import AudioVisualizer from "./components/AudioVisualizer";
 import { createLoopEngine } from "./audio/loopEngine";
 import type { AlbumManifestEntry, AlbumPreset } from "./types";
 
@@ -36,6 +37,7 @@ export default function App() {
   const [logoSrc, setLogoSrc] = useState(MAIN_LOGO_SRC);
   const [masterVolume, setMasterVolume] = useState(0.95);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [analyser, setAnalyser] = useState<AnalyserNode | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [loadProgress, setLoadProgress] = useState(0);
 
@@ -73,6 +75,13 @@ export default function App() {
   }, []);
 
   const selectedAlbum = useMemo(() => albums[selectedIndex], [albums, selectedIndex]);
+
+  useEffect(() => {
+    if (selectedAlbum) {
+      document.documentElement.style.setProperty('--theme-hue', selectedAlbum.themeHue.toString());
+      document.documentElement.style.setProperty('--theme-sat', `${selectedAlbum.themeSaturation}%`);
+    }
+  }, [selectedAlbum]);
 
   const shiftAlbum = (delta: number) => {
     setSelectedIndex((current) => (current + delta + albums.length) % albums.length);
@@ -122,6 +131,7 @@ export default function App() {
     setIsLoading(false);
     setIsPlaying(true);
     setActiveButtons(new Array(LOOP_COUNT).fill(false));
+    setAnalyser(engineRef.current.getAnalyser());
     setScreen("player");
   };
 
@@ -214,6 +224,7 @@ export default function App() {
 
   return (
     <main className="app-shell">
+      <AudioVisualizer analyser={analyser} isPlaying={isPlaying} themeHue={selectedAlbum.themeHue} themeSaturation={selectedAlbum.themeSaturation} />
       {screen === "menu" ? (
         <section className="menu-screen">
 
@@ -302,12 +313,24 @@ export default function App() {
       ) : (
         <section className="player-screen">
           <header className="player-header">
-            <button className="secondary-btn" onClick={handleBackToMenu}>
-              Back
+            <button className="secondary-btn icon-btn" onClick={handleBackToMenu} aria-label="Back">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="19" y1="12" x2="5" y2="12"></line>
+                <polyline points="12 19 5 12 12 5"></polyline>
+              </svg>
             </button>
             <h2>{selectedAlbum.title}</h2>
-            <button className="secondary-btn" onClick={handlePauseToggle}>
-              {isPlaying ? "Pause" : "Play"}
+            <button className="secondary-btn icon-btn" onClick={handlePauseToggle} aria-label={isPlaying ? "Pause" : "Play"}>
+              {isPlaying ? (
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+                  <rect x="6" y="4" width="4" height="16"></rect>
+                  <rect x="14" y="4" width="4" height="16"></rect>
+                </svg>
+              ) : (
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+                  <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                </svg>
+              )}
             </button>
           </header>
           <div className="master-volume-row">

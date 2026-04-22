@@ -17,12 +17,14 @@ export interface LoopEngine {
   setMasterVolume: (value: number) => void;
   getActive: () => boolean[];
   getIsPlaying: () => boolean;
+  getAnalyser: () => AnalyserNode | null;
   destroy: () => void;
 }
 
 export function createLoopEngine(): LoopEngine {
   let audioContext: AudioContext | null = null;
   let masterGain: GainNode | null = null;
+  let analyser: AnalyserNode | null = null;
   let tracks: Track[] = [];
   let activeState = new Array(TARGET_LOOP_COUNT).fill(false);
   let isPlaying = false;
@@ -48,7 +50,13 @@ export function createLoopEngine(): LoopEngine {
       audioContext = new AudioContextCtor();
       masterGain = audioContext.createGain();
       masterGain.gain.value = 0.95;
-      masterGain.connect(audioContext.destination);
+      
+      analyser = audioContext.createAnalyser();
+      analyser.fftSize = 512;
+      analyser.smoothingTimeConstant = 0.8;
+      
+      masterGain.connect(analyser);
+      analyser.connect(audioContext.destination);
     }
 
     if (audioContext.state === "suspended") {
@@ -203,6 +211,7 @@ export function createLoopEngine(): LoopEngine {
 
   const getActive = () => [...activeState];
   const getIsPlaying = () => isPlaying;
+  const getAnalyser = () => analyser;
 
   const setMasterVolume = (value: number) => {
     if (!masterGain || !audioContext) {
@@ -222,6 +231,7 @@ export function createLoopEngine(): LoopEngine {
     setMasterVolume,
     getActive,
     getIsPlaying,
+    getAnalyser,
     destroy
   };
 }
