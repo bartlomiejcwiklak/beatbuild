@@ -10,7 +10,7 @@ interface Track {
 }
 
 export interface LoopEngine {
-  loadPreset: (preset: AlbumPreset) => Promise<void>;
+  loadPreset: (preset: AlbumPreset, onProgress?: (loaded: number, total: number) => void) => Promise<void>;
   start: () => Promise<void>;
   setPlaying: (nextPlaying: boolean) => Promise<void>;
   setActive: (index: number, isActive: boolean) => void;
@@ -111,7 +111,7 @@ export function createLoopEngine(): LoopEngine {
     hasStartedTransport = false;
   };
 
-  const loadPreset = async (preset: AlbumPreset) => {
+  const loadPreset = async (preset: AlbumPreset, onProgress?: (loaded: number, total: number) => void) => {
     await ensureContext();
     if (!audioContext || !masterGain) {
       return;
@@ -123,7 +123,17 @@ export function createLoopEngine(): LoopEngine {
       loopUrls.push("");
     }
 
-    const buffers = await Promise.all(loopUrls.map((url) => fetchAndDecode(url || null)));
+    let loadedCount = 0;
+    const fetchWithProgress = async (url: string | null) => {
+      const buffer = await fetchAndDecode(url);
+      loadedCount++;
+      if (onProgress) {
+        onProgress(loadedCount, TARGET_LOOP_COUNT);
+      }
+      return buffer;
+    };
+
+    const buffers = await Promise.all(loopUrls.map(fetchWithProgress));
     tracks = buffers.map((buffer) => {
       const gain = audioContext!.createGain();
       gain.gain.value = 0;

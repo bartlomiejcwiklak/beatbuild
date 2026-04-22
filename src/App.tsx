@@ -36,6 +36,8 @@ export default function App() {
   const [logoSrc, setLogoSrc] = useState(MAIN_LOGO_SRC);
   const [masterVolume, setMasterVolume] = useState(0.95);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [loadProgress, setLoadProgress] = useState(0);
 
   useEffect(() => {
     let mounted = true;
@@ -81,10 +83,43 @@ export default function App() {
       return;
     }
 
-    await engineRef.current.loadPreset(selectedAlbum);
+    setIsLoading(true);
+    setLoadProgress(0);
+
+    let loopsLoaded = 0;
+    let mapLoaded = 0;
+    const totalAssets = LOOP_COUNT + 1; // 16 loops + 1 button map
+
+    const updateProgress = () => {
+      setLoadProgress((loopsLoaded + mapLoaded) / totalAssets);
+    };
+
+    // Preload button map image so it's ready when the player screen mounts
+    const preloadImage = (url: string) => {
+      return new Promise<void>((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve();
+        img.onerror = () => reject(new Error(`Failed to load image: ${url}`));
+        img.src = url;
+      });
+    };
+
+    const mapPromise = preloadImage(selectedAlbum.buttonMap).then(() => {
+      mapLoaded = 1;
+      updateProgress();
+    }).catch((e) => console.warn(e));
+
+    const enginePromise = engineRef.current.loadPreset(selectedAlbum, (loaded) => {
+      loopsLoaded = loaded;
+      updateProgress();
+    });
+
+    await Promise.all([mapPromise, enginePromise]);
+
     engineRef.current.setMasterVolume(masterVolume);
     await engineRef.current.start();
 
+    setIsLoading(false);
     setIsPlaying(true);
     setActiveButtons(new Array(LOOP_COUNT).fill(false));
     setScreen("player");
@@ -209,6 +244,16 @@ export default function App() {
                   </svg>
                   View on GitHub
                 </a>
+              </aside>
+            </div>
+          ) : null}
+          {isLoading ? (
+            <div className="settings-overlay">
+              <aside className="loading-panel" role="dialog" aria-label="Loading assets">
+                <h3 className="loading-title">Loading Assets...</h3>
+                <div className="progress-bar-container">
+                  <div className="progress-bar" style={{ width: `${Math.round(loadProgress * 100)}%` }}></div>
+                </div>
               </aside>
             </div>
           ) : null}
