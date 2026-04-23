@@ -9,6 +9,7 @@
     "spine": "spine.jpg",
     "themeHue": 230,
     "themeSaturation": 70,
+    "bpm": 110,
     "loops": [
       "loop01.mp3",
       "loop02.mp3",
@@ -38,6 +39,8 @@
     "buttonMap": "button-map.jpg",
     "themeHue": 190,
     "themeSaturation": 5,
+    "bpm": 118,
+    "isNew": true,
     "loops": [
       "loop01.mp3",
       "loop02.mp3",

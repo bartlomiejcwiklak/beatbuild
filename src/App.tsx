@@ -1,8 +1,9 @@
 import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
-import AlbumCarousel from "./components/AlbumCarousel";
+import AlbumCarousel, { AlbumCarouselRef } from "./components/AlbumCarousel";
 import LoopGrid from "./components/LoopGrid";
 import AudioVisualizer from "./components/AudioVisualizer";
 import { createLoopEngine } from "./audio/loopEngine";
+import { usePreferences } from "./hooks/usePreferences";
 import type { AlbumManifestEntry, AlbumPreset } from "./types";
 
 const LOOP_COUNT = 16;
@@ -27,7 +28,9 @@ const normalizePreset = (preset: AlbumManifestEntry): AlbumPreset => {
 };
 
 export default function App() {
+  const { preferences, updatePreference } = usePreferences();
   const engineRef = useRef(createLoopEngine());
+  const carouselRef = useRef<AlbumCarouselRef>(null);
   const [screen, setScreen] = useState<"menu" | "player">("menu");
   const [albums, setAlbums] = useState<AlbumPreset[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -36,6 +39,7 @@ export default function App() {
   const [loadError, setLoadError] = useState("");
   const [logoSrc, setLogoSrc] = useState(MAIN_LOGO_SRC);
   const [masterVolume, setMasterVolume] = useState(0.95);
+  const prevVolumeRef = useRef(0.95);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [analyser, setAnalyser] = useState<AnalyserNode | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -103,7 +107,7 @@ export default function App() {
       setLoadProgress((loopsLoaded + mapLoaded) / totalAssets);
     };
 
-    // Preload button map image so it's ready when the player screen mounts
+    // preload button map image so it's ready when the player screen mounts
     const preloadImage = (url: string) => {
       return new Promise<void>((resolve, reject) => {
         const img = new Image();
@@ -130,9 +134,15 @@ export default function App() {
 
     setIsLoading(false);
     setIsPlaying(true);
-    setActiveButtons(new Array(LOOP_COUNT).fill(false));
     setAnalyser(engineRef.current.getAnalyser());
     setScreen("player");
+
+    // sync active pads back to engine
+    activeButtons.forEach((isActive, idx) => {
+      if (isActive) {
+        engineRef.current.setActive(idx, true);
+      }
+    });
   };
 
   const handleToggleButton = (index: number) => {
@@ -159,8 +169,11 @@ export default function App() {
   const handleBackToMenu = async () => {
     await engineRef.current.setPlaying(false);
     engineRef.current.destroy();
-    setActiveButtons(new Array(LOOP_COUNT).fill(false));
+    if (preferences.clearPadsOnReturn) {
+      setActiveButtons(new Array(LOOP_COUNT).fill(false));
+    }
     setIsPlaying(true);
+    setAnalyser(null);
     setScreen("menu");
   };
 
@@ -168,13 +181,27 @@ export default function App() {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (isLoading || settingsOpen) return;
 
+      if (e.key.toLowerCase() === "m") {
+        e.preventDefault();
+        setMasterVolume((currentVolume) => {
+          if (currentVolume > 0) {
+            prevVolumeRef.current = currentVolume;
+            engineRef.current.setMasterVolume(0);
+            return 0;
+          } else {
+            const nextVolume = prevVolumeRef.current > 0 ? prevVolumeRef.current : 0.95;
+            engineRef.current.setMasterVolume(nextVolume);
+            return nextVolume;
+          }
+        });
+        return;
+      }
+
       if (screen === "menu") {
         if (e.key === "ArrowLeft") {
-          const btn = document.querySelector('.arrow-btn[aria-label="Previous album"]') as HTMLButtonElement | null;
-          btn?.click();
+          carouselRef.current?.navigate(-1);
         } else if (e.key === "ArrowRight") {
-          const btn = document.querySelector('.arrow-btn[aria-label="Next album"]') as HTMLButtonElement | null;
-          btn?.click();
+          carouselRef.current?.navigate(1);
         } else if (e.key === " " || e.key === "Enter") {
           e.preventDefault();
           void handleStart();
@@ -223,8 +250,22 @@ export default function App() {
   }
 
   return (
-    <main className="app-shell">
-      <AudioVisualizer analyser={analyser} isPlaying={isPlaying} themeHue={selectedAlbum.themeHue} themeSaturation={selectedAlbum.themeSaturation} />
+    <main
+      className={`app-shell ${screen === "player" && isPlaying && preferences.visualizerEnabled && activeButtons.some(Boolean) && masterVolume > 0 ? 'bg-beat-flash' : ''}`}
+      style={{
+        '--beat-duration': `${60 / selectedAlbum.bpm}s`,
+        '--flash-intensity': preferences.visualizerIntensity
+      } as React.CSSProperties}
+    >
+      {preferences.visualizerEnabled && (
+        <AudioVisualizer
+          analyser={analyser}
+          isPlaying={isPlaying}
+          themeHue={selectedAlbum.themeHue}
+          themeSaturation={selectedAlbum.themeSaturation}
+          intensity={preferences.visualizerIntensity}
+        />
+      )}
       {screen === "menu" ? (
         <section className="menu-screen">
 
@@ -236,8 +277,17 @@ export default function App() {
               onError={() => setLogoSrc(resolvePublicAsset("logo.png"))}
             />
           </h1>
-          <AlbumCarousel albums={albums} selectedIndex={selectedIndex} onSelect={shiftAlbum} />
-          <h2 className="album-title">{selectedAlbum.title}</h2>
+          <AlbumCarousel
+            ref={carouselRef}
+            albums={albums}
+            selectedIndex={selectedIndex}
+            onSelect={shiftAlbum}
+            reduceMotion={preferences.reduceMotion}
+          />
+          <h2 className="album-title">
+            {selectedAlbum.title}
+            {selectedAlbum.isNew && <span className="new-pill">NEW!</span>}
+          </h2>
           <button className="primary-btn" onClick={handleStart}>
             Start
           </button>
@@ -253,52 +303,6 @@ export default function App() {
               <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
             </svg>
           </button>
-          {settingsOpen ? (
-            <div className="settings-overlay" onClick={() => setSettingsOpen(false)}>
-              <aside className="settings-panel" role="dialog" aria-label="Project settings" onClick={(e) => e.stopPropagation()}>
-                <header className="settings-header">
-                  <h3 className="settings-title">Settings</h3>
-                  <button className="settings-close-btn" onClick={() => setSettingsOpen(false)} aria-label="Close settings">✕</button>
-                </header>
-                <div className="settings-volume-row">
-                  <label className="master-volume-label" htmlFor="menu-master-volume">
-                    Master
-                  </label>
-                  <input
-                    id="menu-master-volume"
-                    className="master-volume-slider"
-                    type="range"
-                    min={0}
-                    max={1}
-                    step={0.01}
-                    value={masterVolume}
-                    onChange={handleMasterVolumeChange}
-                    aria-label="Master volume"
-                  />
-                  <span className="master-volume-value" aria-hidden="true">
-                    {Math.round(masterVolume * 100)}
-                  </span>
-                </div>
-                <p className="settings-info">
-                  beatbuild is a loop-based music toy. pick a sample album and create your own beat by toggling pads.
-                </p>
-                <p className="settings-info">
-                  made with <span className="heart">♥</span> by @ohhbaro, inspired by incredibox.
-                </p>
-                <a
-                  href="https://github.com/bartlomiejcwiklak/beatbuild"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="github-link"
-                >
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z" />
-                  </svg>
-                  View on GitHub
-                </a>
-              </aside>
-            </div>
-          ) : null}
           {isLoading ? (
             <div className="settings-overlay">
               <aside className="loading-panel" role="dialog" aria-label="Loading assets">
@@ -313,24 +317,47 @@ export default function App() {
       ) : (
         <section className="player-screen">
           <header className="player-header">
-            <button className="secondary-btn icon-btn" onClick={handleBackToMenu} aria-label="Back">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="19" y1="12" x2="5" y2="12"></line>
-                <polyline points="12 19 5 12 12 5"></polyline>
-              </svg>
-            </button>
-            <h2>{selectedAlbum.title}</h2>
-            <button className="secondary-btn icon-btn" onClick={handlePauseToggle} aria-label={isPlaying ? "Pause" : "Play"}>
-              {isPlaying ? (
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
-                  <rect x="6" y="4" width="4" height="16"></rect>
-                  <rect x="14" y="4" width="4" height="16"></rect>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <button className="secondary-btn icon-btn" onClick={handleBackToMenu} aria-label="Back">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="19" y1="12" x2="5" y2="12"></line>
+                  <polyline points="12 19 5 12 12 5"></polyline>
                 </svg>
-              ) : (
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
-                  <polygon points="5 3 19 12 5 21 5 3"></polygon>
-                </svg>
+              </button>
+              <button className="secondary-btn icon-btn" onClick={handlePauseToggle} aria-label={isPlaying ? "Pause" : "Play"}>
+                {isPlaying ? (
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+                    <rect x="6" y="4" width="4" height="16"></rect>
+                    <rect x="14" y="4" width="4" height="16"></rect>
+                  </svg>
+                ) : (
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+                    <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                  </svg>
+                )}
+              </button>
+            </div>
+            <div className="player-title-row">
+              <h2>{selectedAlbum.title}</h2>
+              {preferences.showMetronome && (
+                <div
+                  className={`metronome-dot ${isPlaying ? "playing" : ""}`}
+                  style={{ animationDuration: `${60 / selectedAlbum.bpm}s` }}
+                  aria-hidden="true"
+                />
               )}
+            </div>
+            <button
+              className="settings-btn icon-btn in-player"
+              type="button"
+              aria-label="Open settings"
+              aria-expanded={settingsOpen}
+              onClick={() => setSettingsOpen(true)}
+            >
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="3"></circle>
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+              </svg>
             </button>
           </header>
           <div className="master-volume-row">
@@ -355,6 +382,99 @@ export default function App() {
           <LoopGrid buttonMap={selectedAlbum.buttonMap} activeButtons={activeButtons} onToggle={handleToggleButton} />
         </section>
       )}
+
+      {settingsOpen ? (
+        <div className="settings-overlay" onClick={() => setSettingsOpen(false)}>
+          <aside className="settings-panel" role="dialog" aria-label="Project settings" onClick={(e) => e.stopPropagation()}>
+            <header className="settings-header">
+              <h3 className="settings-title">Settings</h3>
+              <button className="settings-close-btn" onClick={() => setSettingsOpen(false)} aria-label="Close settings">✕</button>
+            </header>
+            <div className="settings-section">
+              <h4 className="settings-subtitle">Preferences</h4>
+
+              <label className="settings-toggle">
+                <input
+                  type="checkbox"
+                  checked={preferences.visualizerEnabled}
+                  onChange={(e) => updatePreference("visualizerEnabled", e.target.checked)}
+                />
+                <span>Background Visualizer</span>
+              </label>
+
+              {preferences.visualizerEnabled && (
+                <div className="settings-sub-row">
+                  <label>Intensity</label>
+                  <input
+                    className="master-volume-slider"
+                    type="range"
+                    min="0.1" max="2.0" step="0.1"
+                    value={preferences.visualizerIntensity}
+                    onChange={(e) => updatePreference("visualizerIntensity", Number(e.target.value))}
+                    aria-label="Visualizer intensity"
+                  />
+                </div>
+              )}
+
+              <label className="settings-toggle">
+                <input
+                  type="checkbox"
+                  checked={preferences.clearPadsOnReturn}
+                  onChange={(e) => updatePreference("clearPadsOnReturn", e.target.checked)}
+                />
+                <span>Clear Pads on Menu Return</span>
+              </label>
+
+              <label className="settings-toggle">
+                <input
+                  type="checkbox"
+                  checked={preferences.reduceMotion}
+                  onChange={(e) => updatePreference("reduceMotion", e.target.checked)}
+                />
+                <span>Reduce Motion (Carousel)</span>
+              </label>
+
+              <label className="settings-toggle">
+                <input
+                  type="checkbox"
+                  checked={preferences.showMetronome}
+                  onChange={(e) => updatePreference("showMetronome", e.target.checked)}
+                />
+                <span>Show Metronome Indicator</span>
+              </label>
+            </div>
+
+            <div className="settings-section">
+              <h4 className="settings-subtitle">Keyboard Shortcuts</h4>
+              <ul className="shortcuts-list">
+                <li><kbd>Space</kbd> <span>Play / Pause</span></li>
+                <li><kbd>M</kbd> <span>Mute Master</span></li>
+                <li><kbd>Esc</kbd> <span>Back to Menu</span></li>
+                <li><kbd>←</kbd> <kbd>→</kbd> <span>Change Album</span></li>
+                <li><kbd>1</kbd>-<kbd>4</kbd>, <kbd>Q</kbd>-<kbd>R</kbd> <span>Toggle Pads</span></li>
+              </ul>
+            </div>
+
+            <p className="settings-info">
+              beatbuild is a loop-based music toy. pick a sample album and create your own beat by toggling pads.
+            </p>
+            <p className="settings-info">
+              made with <span className="heart">♥</span> by @ohhbaro, inspired by incredibox.
+            </p>
+            <a
+              href="https://github.com/bartlomiejcwiklak/beatbuild"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="github-link"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z" />
+              </svg>
+              View on GitHub
+            </a>
+          </aside>
+        </div>
+      ) : null}
     </main>
   );
 }

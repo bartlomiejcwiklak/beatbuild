@@ -1,19 +1,25 @@
-import { CSSProperties, PointerEvent, useEffect, useMemo, useRef, useState } from "react";
+import { CSSProperties, PointerEvent, forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 import type { AlbumPreset } from "../types";
 
 interface AlbumCarouselProps {
   albums: AlbumPreset[];
   selectedIndex: number;
   onSelect: (delta: number) => void;
+  reduceMotion: boolean;
 }
 
-export default function AlbumCarousel({ albums, selectedIndex, onSelect }: AlbumCarouselProps) {
+export interface AlbumCarouselRef {
+  navigate: (direction: number) => void;
+}
+
+const AlbumCarousel = forwardRef<AlbumCarouselRef, AlbumCarouselProps>(({ albums, selectedIndex, onSelect, reduceMotion }, ref) => {
   const [rotationY, setRotationY] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [transitionClass, setTransitionClass] = useState("");
   const arrowTimersRef = useRef<number[]>([]);
   const isArrowTransitionRef = useRef(false);
   const rotationRef = useRef(0);
+  const reduceMotionRef = useRef(reduceMotion);
   const dragRef = useRef({
     dragging: false,
     startX: 0,
@@ -34,6 +40,10 @@ export default function AlbumCarousel({ albums, selectedIndex, onSelect }: Album
     rotationRef.current = rotationY;
   }, [rotationY]);
 
+  useEffect(() => {
+    reduceMotionRef.current = reduceMotion;
+  }, [reduceMotion]);
+
   useEffect(
     () => () => {
       arrowTimersRef.current.forEach((timer) => clearTimeout(timer));
@@ -46,10 +56,10 @@ export default function AlbumCarousel({ albums, selectedIndex, onSelect }: Album
     let lastTime = performance.now();
 
     const animate = (time: number) => {
-      const deltaTime = Math.min(time - lastTime, 50); // Cap delta to avoid large jumps
+      const deltaTime = Math.min(time - lastTime, 50); // cap delta to avoid large jumps
       lastTime = time;
 
-      if (!dragRef.current.dragging && !isArrowTransitionRef.current) {
+      if (!dragRef.current.dragging && !isArrowTransitionRef.current && !reduceMotionRef.current) {
         setRotationY((prev) => prev + (deltaTime * 0.015)); // 15 degrees per second
       }
       
@@ -136,11 +146,17 @@ export default function AlbumCarousel({ albums, selectedIndex, onSelect }: Album
     const inTimer = window.setTimeout(() => {
       setTransitionClass("");
       isArrowTransitionRef.current = false;
-      setRotationY((prev) => prev); // Trigger re-render to resume auto-rotation
+      setRotationY((prev) => prev); // trigger re-render to resume auto-rotation
     }, 430);
 
     arrowTimersRef.current.push(outTimer, inTimer);
   };
+
+  useImperativeHandle(ref, () => ({
+    navigate: (direction: number) => {
+      handleArrow(direction);
+    }
+  }));
 
   return (
     <div className="album-picker">
@@ -200,5 +216,7 @@ export default function AlbumCarousel({ albums, selectedIndex, onSelect }: Album
       </button>
     </div>
   );
-}
+});
+
+export default AlbumCarousel;
 

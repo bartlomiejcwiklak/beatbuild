@@ -29,6 +29,7 @@ export function createLoopEngine(): LoopEngine {
   let activeState = new Array(TARGET_LOOP_COUNT).fill(false);
   let isPlaying = false;
   let hasStartedTransport = false;
+  let silentAudio: HTMLAudioElement | null = null;
 
   const fadeTo = (gainNode: GainNode, value: number, duration = 0.04) => {
     if (!audioContext) {
@@ -57,6 +58,21 @@ export function createLoopEngine(): LoopEngine {
       
       masterGain.connect(analyser);
       analyser.connect(audioContext.destination);
+
+      // create silent audio to keep ios safari web audio active in background
+      silentAudio = new Audio("data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA");
+      silentAudio.loop = true;
+      const silentSource = audioContext.createMediaElementSource(silentAudio);
+      silentSource.connect(audioContext.destination);
+
+      if ('mediaSession' in navigator) {
+        navigator.mediaSession.setActionHandler('play', () => {
+          void setPlaying(true);
+        });
+        navigator.mediaSession.setActionHandler('pause', () => {
+          void setPlaying(false);
+        });
+      }
     }
 
     if (audioContext.state === "suspended") {
@@ -103,7 +119,7 @@ export function createLoopEngine(): LoopEngine {
         try {
           track.source.stop();
         } catch {
-          // Already stopped.
+          // already stopped.
         }
         track.source.disconnect();
       }
@@ -114,6 +130,9 @@ export function createLoopEngine(): LoopEngine {
 
   const destroy = () => {
     stopTrackAudio();
+    if (silentAudio && !silentAudio.paused) {
+      silentAudio.pause();
+    }
     activeState = new Array(TARGET_LOOP_COUNT).fill(false);
     isPlaying = false;
     hasStartedTransport = false;
@@ -129,6 +148,17 @@ export function createLoopEngine(): LoopEngine {
     const loopUrls = preset.loops.slice(0, TARGET_LOOP_COUNT);
     while (loopUrls.length < TARGET_LOOP_COUNT) {
       loopUrls.push("");
+    }
+
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: preset.title,
+        artist: "BeatBuild",
+        album: "Loop Player",
+        artwork: [
+          { src: preset.coverFront, sizes: '512x512', type: 'image/png' }
+        ]
+      });
     }
 
     let loadedCount = 0;
@@ -175,6 +205,10 @@ export function createLoopEngine(): LoopEngine {
       await audioContext.resume();
     }
 
+    if (silentAudio && silentAudio.paused) {
+      silentAudio.play().catch(() => {});
+    }
+
     isPlaying = true;
   };
 
@@ -191,10 +225,16 @@ export function createLoopEngine(): LoopEngine {
       if (audioContext.state === "suspended") {
         await audioContext.resume();
       }
+      if (silentAudio && silentAudio.paused) {
+        silentAudio.play().catch(() => {});
+      }
       isPlaying = true;
       return;
     }
 
+    if (silentAudio && !silentAudio.paused) {
+      silentAudio.pause();
+    }
     if (audioContext.state === "running") {
       await audioContext.suspend();
     }
