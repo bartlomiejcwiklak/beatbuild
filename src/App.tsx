@@ -250,13 +250,7 @@ export default function App() {
   }
 
   return (
-    <main
-      className={`app-shell ${screen === "player" && isPlaying && preferences.visualizerEnabled && activeButtons.some(Boolean) && masterVolume > 0 ? 'bg-beat-flash' : ''}`}
-      style={{
-        '--beat-duration': `${60 / selectedAlbum.bpm}s`,
-        '--flash-intensity': preferences.visualizerIntensity
-      } as React.CSSProperties}
-    >
+    <main className="app-shell">
       {preferences.visualizerEnabled && (
         <AudioVisualizer
           analyser={analyser}
