@@ -1,3 +1,8 @@
+export interface SidechainConfig {
+  triggerIndices: number[];
+  targetIndices: number[];
+}
+
 export interface AlbumPreset {
   id: string;
   title: string;
@@ -11,6 +16,7 @@ export interface AlbumPreset {
   bpm: number;
   isNew?: boolean;
   loops: string[];
+  sidechain?: SidechainConfig;
 }
 
 export type AlbumManifestEntry = AlbumPreset;

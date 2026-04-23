@@ -39,6 +39,8 @@ export default function App() {
   const [loadError, setLoadError] = useState("");
   const [logoSrc, setLogoSrc] = useState(MAIN_LOGO_SRC);
   const [masterVolume, setMasterVolume] = useState(0.95);
+  const [sidechainEnabled, setSidechainEnabled] = useState(true);
+  const [sidechainStrength, setSidechainStrength] = useState(0.65);
   const prevVolumeRef = useRef(0.95);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [analyser, setAnalyser] = useState<AnalyserNode | null>(null);
@@ -79,6 +81,12 @@ export default function App() {
   }, []);
 
   const selectedAlbum = useMemo(() => albums[selectedIndex], [albums, selectedIndex]);
+  const hasSidechainConfig = useMemo(() => {
+    if (!selectedAlbum?.sidechain) {
+      return false;
+    }
+    return selectedAlbum.sidechain.triggerIndices.length > 0 && selectedAlbum.sidechain.targetIndices.length > 0;
+  }, [selectedAlbum]);
 
   useEffect(() => {
     if (selectedAlbum) {
@@ -130,6 +138,9 @@ export default function App() {
     await Promise.all([mapPromise, enginePromise]);
 
     engineRef.current.setMasterVolume(masterVolume);
+    engineRef.current.setSidechainConfig(selectedAlbum.sidechain);
+    engineRef.current.setSidechainStrength(sidechainStrength);
+    engineRef.current.setSidechainEnabled(hasSidechainConfig && sidechainEnabled);
     await engineRef.current.start();
 
     setIsLoading(false);
@@ -175,6 +186,18 @@ export default function App() {
     setIsPlaying(true);
     setAnalyser(null);
     setScreen("menu");
+  };
+
+  const handleSidechainToggle = (event: ChangeEvent<HTMLInputElement>) => {
+    const enabled = event.target.checked;
+    setSidechainEnabled(enabled);
+    engineRef.current.setSidechainEnabled(hasSidechainConfig && enabled);
+  };
+
+  const handleSidechainStrengthChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const value = Number(event.target.value);
+    setSidechainStrength(value);
+    engineRef.current.setSidechainStrength(value);
   };
 
   useEffect(() => {
@@ -332,7 +355,10 @@ export default function App() {
               </button>
             </div>
             <div className="player-title-row">
-              <h2>{selectedAlbum.title}</h2>
+              <h2>
+                {selectedAlbum.title}
+                {selectedAlbum.isNew && <span className="new-pill">NEW!</span>}
+              </h2>
               {preferences.showMetronome && (
                 <div
                   className={`metronome-dot ${isPlaying ? "playing" : ""}`}
@@ -371,6 +397,34 @@ export default function App() {
             />
             <span className="master-volume-value" aria-hidden="true">
               {Math.round(masterVolume * 100)}
+            </span>
+          </div>
+          <div className="master-volume-row sidechain-row">
+            <label className="master-volume-label sidechain-toggle-label" htmlFor="sidechain-enabled">
+              Sidechain
+              <input
+                id="sidechain-enabled"
+                type="checkbox"
+                checked={sidechainEnabled && hasSidechainConfig}
+                onChange={handleSidechainToggle}
+                disabled={!hasSidechainConfig}
+                aria-label="Enable sidechain"
+              />
+            </label>
+            <input
+              id="sidechain-strength"
+              className="master-volume-slider"
+              type="range"
+              min={0}
+              max={1}
+              step={0.01}
+              value={sidechainStrength}
+              onChange={handleSidechainStrengthChange}
+              disabled={!hasSidechainConfig}
+              aria-label="Sidechain strength"
+            />
+            <span className="master-volume-value" aria-hidden="true">
+              {Math.round(sidechainStrength * 100)}
             </span>
           </div>
           <LoopGrid buttonMap={selectedAlbum.buttonMap} activeButtons={activeButtons} onToggle={handleToggleButton} />

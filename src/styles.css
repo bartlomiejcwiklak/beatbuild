@@ -821,6 +821,54 @@ kbd {
   opacity: 0.85;
 }
 
+.sidechain-row {
+  margin-top: -0.35rem;
+}
+
+.sidechain-toggle-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.sidechain-toggle-label input[type="checkbox"] {
+  appearance: none;
+  width: 34px;
+  height: 18px;
+  border-radius: 99px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.1);
+  position: relative;
+  cursor: pointer;
+  transition: all 180ms ease;
+}
+
+.sidechain-toggle-label input[type="checkbox"]::after {
+  content: "";
+  position: absolute;
+  top: 1px;
+  left: 1px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 180ms cubic-bezier(0.3, 0.8, 0.3, 1);
+}
+
+.sidechain-toggle-label input[type="checkbox"]:checked {
+  background: hsla(var(--theme-hue, 250), var(--theme-sat, 70%), 60%, 1);
+  border-color: transparent;
+}
+
+.sidechain-toggle-label input[type="checkbox"]:checked::after {
+  transform: translateX(16px);
+}
+
+.sidechain-toggle-label input[type="checkbox"]:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .loop-grid {
   width: min(700px, 92vw);
   display: grid;
